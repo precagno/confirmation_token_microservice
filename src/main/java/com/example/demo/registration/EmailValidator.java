@@ -1,6 +1,5 @@
 package com.example.demo.registration;
 
-import com.sun.xml.bind.v2.TODO;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Predicate;
@@ -9,7 +8,7 @@ import java.util.function.Predicate;
 public class EmailValidator implements Predicate<String> {
 
   @Override
-  public boolean test(String s) {
+  public boolean test(final String s) {
     //TODO: regex to validate
     return true;
   }

@@ -20,7 +20,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
   private final BCryptPasswordEncoder passwordEncoder;
 
   @Override
-  protected void configure(HttpSecurity http) throws Exception {
+  protected void configure(final HttpSecurity http) throws Exception {
     http
         .csrf().disable()
         .authorizeRequests()
@@ -31,7 +31,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
   }
 
   @Override
-  protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+  protected void configure(final AuthenticationManagerBuilder auth) {
     auth.authenticationProvider(authenticationProvider());
   }
 

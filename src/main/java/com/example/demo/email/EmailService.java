@@ -1,7 +1,6 @@
 package com.example.demo.email;
 
 import javax.mail.MessagingException;
-import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,23 +14,28 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EmailService implements EmailSender {
 
+  //TODO: mover estos datos a properties
+  private static final String ENCODING = "utf-8";
+  private static final String EMAIL_SUBJECT = "Confirm your email";
+  private static final String EMAIL_FROM_ADRESS = "hello@amigoscode.com";
+  private static final String SEND_EMAIL_ERROR_MESSAGE = "Failed to send email";
   private final JavaMailSender mailSender;
 
   @Override
   @Async
-  public void send(String receiverAddress, String emailBody) {
+  public void send(final String receiverAddress, final String emailBody) {
     try {
       MimeMessage mimeMessage = mailSender.createMimeMessage();
       MimeMessageHelper helper =
-          new MimeMessageHelper(mimeMessage, "utf-8");
+          new MimeMessageHelper(mimeMessage, ENCODING);
       helper.setTo(receiverAddress);
-      helper.setSubject("Confirm your email");
-      helper.setFrom("hello@amigoscode.com");
+      helper.setSubject(EMAIL_SUBJECT);
+      helper.setFrom(EMAIL_FROM_ADRESS);
       helper.setText(emailBody, true);
       mailSender.send(mimeMessage);
-    } catch (MessagingException e) {
-      log.error("failed to send email", e);
-      throw new IllegalStateException("failed to send email");
+    } catch (MessagingException messagingException) {
+      log.error(SEND_EMAIL_ERROR_MESSAGE, messagingException);
+      throw new IllegalStateException(SEND_EMAIL_ERROR_MESSAGE);
     }
   }
 }

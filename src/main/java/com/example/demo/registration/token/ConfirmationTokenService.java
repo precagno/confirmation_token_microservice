@@ -1,5 +1,6 @@
 package com.example.demo.registration.token;
 
+import com.example.demo.util.DateUtil;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,15 +13,15 @@ public class ConfirmationTokenService {
 
   private final ConfirmationTokenRepository confirmationTokenRepository;
 
-  public void saveConfirmationToken(ConfirmationToken confirmationToken) {
+  public void saveConfirmationToken(final ConfirmationToken confirmationToken) {
     confirmationTokenRepository.save(confirmationToken);
   }
 
-  public Optional<ConfirmationToken> getToken(String token) {
+  public Optional<ConfirmationToken> getToken(final String token) {
     return confirmationTokenRepository.findByToken(token);
   }
 
-  public int setConfirmedAt(String token) {
-    return confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
+  public void setConfirmedAt(final String token) {
+    confirmationTokenRepository.updateConfirmedAt(token, DateUtil.getTimeNow());
   }
 }

@@ -6,22 +6,25 @@ import com.example.demo.appuser.AppUserService;
 import com.example.demo.email.EmailSender;
 import com.example.demo.registration.token.ConfirmationToken;
 import com.example.demo.registration.token.ConfirmationTokenService;
+import com.example.demo.util.DateUtil;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class RegistrationService {
 
-  private static final String CONFIRMATION_TOKEN_NOT_FOUND_ERROR_MESSAGE = "No confirmation token found with value %s";
-  private static final String EMAIL_NOT_VALID_ERROR_MESSAGE = "Email is not valid";
-  private static final String EMAIL_ALREADY_CONFIRMED_ERROR_MESSAGE = "Email already confirmed";
-  private static final String TOKEN_EXPIRED_ERROR_MESSAGE = "Token expired";
-  private static final String CONFIRMED_OK_MESSAGE = "Confirmed";
+  private static final String CONFIRMATION_TOKEN_NOT_FOUND_ERROR_MESSAGE = "No confirmation token was found with value %s";
+  private static final String EMAIL_NOT_VALID_ERROR_MESSAGE = "Email %s is not valid";
+  private static final String EMAIL_ALREADY_CONFIRMED_ERROR_MESSAGE = "Email %s was already confirmed";
+  private static final String TOKEN_EXPIRED_ERROR_MESSAGE = "Token %s is already expired";
+  private static final String CONFIRMED_OK_MESSAGE = "Email %s confirmed OK";
   private static final String CONFIRMATION_LINK = "http://localhost:8080/api/v1/registration/confirm?token=%s";
 
   private final AppUserService appUserService;
@@ -30,10 +33,12 @@ public class RegistrationService {
   private final EmailValidator emailValidator;
 
 
-  public String register(RegistrationRequest request) {
-    boolean isValidEmail = emailValidator.test(request.getEmail());
-    if (!isValidEmail) {
-      throw new IllegalStateException(EMAIL_NOT_VALID_ERROR_MESSAGE);
+  public String registerUser(final RegistrationRequest request) {
+    String email = request.getEmail();
+    if (isEmailNotValid(email)) {
+      String emailNotValidErrorMessage = String.format(EMAIL_NOT_VALID_ERROR_MESSAGE, email);
+      log.error(emailNotValidErrorMessage);
+      throw new IllegalStateException(emailNotValidErrorMessage);
     }
     AppUser appUserToRegister = buildAppUserForRegistrationProcess(request);
     String generatedToken = appUserService.signUpUser(appUserToRegister);
@@ -46,30 +51,40 @@ public class RegistrationService {
   }
 
   @Transactional
-  public String confirmToken(String token) {
+  public void confirmToken(final String token) {
 
     ConfirmationToken confirmationTokenFound = confirmationTokenService.getToken(token).orElseThrow(
         () -> new IllegalStateException(
             String.format(CONFIRMATION_TOKEN_NOT_FOUND_ERROR_MESSAGE, token)));
 
+    String confirmationTokenAppUserEmail = confirmationTokenFound.getAppUser().getEmail();
+
     if (Objects.nonNull(confirmationTokenFound.getConfirmedAt())) {
-      throw new IllegalStateException(EMAIL_ALREADY_CONFIRMED_ERROR_MESSAGE);
+      String emailAlreadyConfirmedErrorMessage = String
+          .format(EMAIL_ALREADY_CONFIRMED_ERROR_MESSAGE, confirmationTokenAppUserEmail);
+      log.error(emailAlreadyConfirmedErrorMessage);
+      throw new IllegalStateException(emailAlreadyConfirmedErrorMessage);
     }
 
     LocalDateTime expiredAt = confirmationTokenFound.getExpiresAt();
 
-    if (expiredAt.isBefore(LocalDateTime.now())) {
-      throw new IllegalStateException(TOKEN_EXPIRED_ERROR_MESSAGE);
+    if (expiredAt.isBefore(DateUtil.getTimeNow())) {
+      String confirmationTokenExpiredErrorMessage = String
+          .format(TOKEN_EXPIRED_ERROR_MESSAGE, token);
+      log.error(confirmationTokenExpiredErrorMessage);
+      throw new IllegalStateException(confirmationTokenExpiredErrorMessage);
     }
 
     confirmationTokenService.setConfirmedAt(token);
-
-    appUserService.enableAppUser(confirmationTokenFound.getAppUser().getEmail());
-
-    return CONFIRMED_OK_MESSAGE;
+    appUserService.enableAppUser(confirmationTokenAppUserEmail);
+    log.info(String.format(CONFIRMED_OK_MESSAGE, confirmationTokenAppUserEmail));
   }
 
-  private AppUser buildAppUserForRegistrationProcess(RegistrationRequest request) {
+  private boolean isEmailNotValid(final String email) {
+    return Boolean.FALSE.equals(emailValidator.test(email));
+  }
+
+  private AppUser buildAppUserForRegistrationProcess(final RegistrationRequest request) {
     return new AppUser(
         request.getFirstName(),
         request.getLastName(),
@@ -79,7 +94,7 @@ public class RegistrationService {
     );
   }
 
-  private String buildEmail(String name, String link) {
+  private String buildEmail(final String name, final String link) {
     return
         "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n"
             +
